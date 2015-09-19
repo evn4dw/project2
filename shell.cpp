@@ -1,68 +1,16 @@
-#include "shell.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <string>
+#include <iostream>
+#include <vector>
 
-const char shell::INPUT_REDIRECTION = '<';
-const char shell::OUTPUT_REDIRECTION = '>';
-const char shell::PIPE = '|';
+const char INPUT_REDIRECTION = '<';
+const char OUTPUT_REDIRECTION = '>';
+const char PIPE = '|';
 const std::string SYS_EXIT = "exit"; 
 
-shell::shell()
-{
-
-}
-
-void shell::process_input(std::ostream & out, std::string s)
-{
-  if (s.size() > 100) {
-    out << "Error: Cannot process lines longer than 100 char." << std::endl;
-    return;
-  }
-
-  do {
-    std::size_t pos_input = s.find(INPUT_REDIRECTION);
-    std::size_t pos_output = s.find(OUTPUT_REDIRECTION);
-    std::size_t pos_pipe = s.find(PIPE);
-
-    if (pos_input == std::string::npos && 
-	pos_output == std::string::npos && pos_pipe == std::string::npos) {
-      run_command(out, s);
-      return;
-    }
-      
-    std::cout << "POS_INPUT: " << pos_input << std::endl;
-    std::cout << "POS_OUTPUT: " << pos_output << std::endl;
-    std::cout << "POS_PIPE: " << pos_pipe << std::endl;
-
-    if (pos_input < pos_output && pos_input < pos_pipe)
-      out << "INPUT";
-
-    else if (pos_output < pos_input && pos_output < pos_pipe)
-      out << "OUTPUT";
-
-    else if (pos_pipe < pos_input && pos_pipe < pos_output)
-      out << "PIPE";
-
-    pid_t pid = fork();
-
-    if (pid == 0) {
-      out << "Child process" << std::endl;
-
-      execvp();
-    }
-    else if (pid > 0) {
-      out << "Parent process" << std::endl;
-    } 
-
-    out << s << std::endl;
-  }
-  while (!(pos_input == std::string::npos) || 
-	 !(pos_output == std::string::npos) ||
-	 !(pos_pipe == std::string::npos));
-}
-
-bool shell::verify_word(std::ostream & out, std::string s)
+bool verify_word(std::string s)
 {
  for (int i = 0; i < s.size(); i++) {
     int dec = (int) s.at(i);
@@ -70,18 +18,47 @@ bool shell::verify_word(std::ostream & out, std::string s)
     bool range2 = (dec >= 65) && (dec <= 90);
     bool range3 = (dec >= 97) && (dec <= 122);
     bool range4 = (dec == 95);
-    if (! (range1 || range2 || range3 || range4)) {
-      out << "Error: Word contains invalid character." << std::endl;
+    if (!(range1 || range2 || range3 || range4)) {
       return false;
     }
-  }
- return true;
  }
-
-void shell::run_command(std::ostream & out, std::string s)
-{
-  if (!s.at(0) == '/') {  
-
-  }
-  exec
+ return true;
 }
+
+std::vector<std::string> process_input(std::ostream &out, std::string s)
+{
+  std::vector<std::string> input(10);
+  if (s.size() > 100) {
+    out << "Error: Cannot process lines longer than 100 char." << std::endl;
+    return input;
+  }
+  if (!verify_word(s)) {
+    out << "Error: Invalid characters found in line.";
+    return input;
+  }
+
+  int pos = 0;
+  int i = 0;
+  for (i; i < s.size(); i++){
+    if (s.at(i) == INPUT_REDIRECTION || s.at(i) == OUTPUT_REDIRECTION || s.at(i) == PIPE){
+      input.push_back(s.substr(pos, i));
+      input.push_back("" + s.at(i));
+      pos = i+1;
+    }
+  }
+  input.push_back(s.substr(pos, i));
+  return input; 
+}
+
+int main()
+{
+  std::string input;
+  std::cout << "shell>" << std::endl;
+  while (std::cin >> input) {
+    std::vector<std::string> v = process_input(std::cout, input);
+    for(int i = 0; i < v.size(); i++)
+      std::cout << v[i] << std::endl;
+    std::cout << "shell>" << std::endl;
+  }
+}
+ 
