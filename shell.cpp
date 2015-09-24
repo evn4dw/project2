@@ -90,6 +90,11 @@ int process_input(string s, vector<string> &token_groups){
       if (s.at(i) == PIPE) contains_pipe = true;
       
       if (s.at(i-1) == 0x20 && s.at(i+1) == 0x20){
+
+	if(s.substr(pos, i-pos) == " "){
+	  cout << "Error: no whitespace only command allowed";
+	  return -1;  
+	}
 	
 	token_groups.push_back(trim_token_group(s.substr(pos, i-pos)));
 	token_groups.push_back(string(1, s.at(i)));
@@ -102,8 +107,8 @@ int process_input(string s, vector<string> &token_groups){
       }
     }
   }
-  if(s.substr(pos) == " "){
-    cout << "Error: no white space only commands allowed";
+  if(s.substr(pos).size() < 1){
+    cout << "Error: no whitespace only command allowed";
     return -1;
   }
   token_groups.push_back(trim_token_group(s.substr(pos)));
