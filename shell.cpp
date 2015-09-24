@@ -121,16 +121,56 @@ int process_input(string s, vector<string> &token_groups){
 int execute_input(vector<string> &v)
 {
   int pos = 1;
-  //  while (pos != v.size() - 1) {
-  string command = v.at(0);
-  cout << "Command: " << command << endl;
-  istringstream iss(command);
-  vector<string> command_args;
-  copy(istream_iterator<string>(iss),
-       istream_iterator<string>(),
-       back_inserter(command_args));
+  //  while (pos != v.size() - 1)
+  cout << "Command: '" + v.at(0) +"'" << endl;
+  vector< vector<char> > args_vector;
+
+  string s;
+  stringstream ss(v.at(0));
+
+  while(getline(ss, s, ' ')){
+    cout << "Command chunk is: " + s << endl;
+    args_vector.push_back(vector<char>(s.begin(), s.end()));
+    args_vector.push_back(args_vector.back().push_back('\0'));
+  }
+
+  char *command_args[args_vector.size() + 1];
+
+  for(int i = 0; i < args_vector.size(); i++){
+    char *command_arg = &args_vector[i][0];   
+    command_args[i] = command_arg;
+  }
+
+  for(int i = 0; i < args_vector.size(); i++){
+    cout << "arg is : '";
+    for(int j = 0; j < args_vector[i].size(); j++){
+      cout << command_args[i][j];
+    }
+    cout << "'\n";
+  }
+
+  command_args[args_vector.size() + 1] = NULL;
+
+  cout<< command_args[args_vector.size() + 1] << endl;
   
+  /*stringstream tss(v.at(0));
+  int j = 0;
+  while(getline(tss, s, ' ')){
+    /*cout << "Command chunk from command_args is: ";
+    for (int i = 0; i < s.size(); i++){
+      cout << command_args[j][i];
+      }*/
+  /*cout << "Command chunk from args_vector is: ";
+    for (int i = 0; i < s.size(); i++){
+      cout << args_vector[j][i];
+      }
+    cout << '\n';
+    j++;
+    }*/
+
   
+  execvp(command_args[0], command_args);
+
   //char * args[] = {"", "", NULL};
 	
     //int pid = fork();
@@ -158,6 +198,7 @@ int execute_input(vector<string> &v)
     }
     
     }*/
+  return 1;
 }
   
 int main()
@@ -175,9 +216,11 @@ int main()
     if(process_status > 0){  
 
       //Testing
-      for(int i = 0; i < token_groups.size(); i++)
-	cout << token_groups.at(i) << endl;
+      /*for(int i = 0; i < token_groups.size(); i++)
+	cout << token_groups.at(i) << endl;*/
+
       execute_input(token_groups);
+
     }
     cout << "\nshell> ";
   }
