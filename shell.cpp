@@ -6,8 +6,8 @@
 #include <iostream>
 #include <vector>
 #include <sstream>
-#include <iterator>
-#include <algorithm>
+#include <sys/types.h>
+#include <sys/wait.h>
 
 using namespace std;
 
@@ -118,111 +118,59 @@ int process_input(string s, vector<string> &token_groups){
   return 1; 
 }
 
-int execute_input(vector<string> &v)
-{
-  int pos = 1;
-  //  while (pos != v.size() - 1)
-  cout << "Command: '" + v.at(0) +"'" << endl;
+void execute(&vector<string> v){
   vector< vector<char> > args_vector;
-
+  char *args[50] = {NULL};
   string s;
-  stringstream ss(v.at(0));
-
-  while(getline(ss, s, ' ')){
-    cout << "Command chunk is: " + s << endl;
-    args_vector.push_back(vector<char>(s.begin(), s.end()));
-    args_vector.push_back(args_vector.back().push_back('\0'));
-  }
-
-  char *command_args[args_vector.size() + 1];
-
-  for(int i = 0; i < args_vector.size(); i++){
-    char *command_arg = &args_vector[i][0];   
-    command_args[i] = command_arg;
-  }
-
-  for(int i = 0; i < args_vector.size(); i++){
-    cout << "arg is : '";
-    for(int j = 0; j < args_vector[i].size(); j++){
-      cout << command_args[i][j];
-    }
-    cout << "'\n";
-  }
-
-  command_args[args_vector.size() + 1] = NULL;
-
-  cout<< command_args[args_vector.size() + 1] << endl;
+  stringstream ss(v.front());
+  v.pop_front();
   
-  /*stringstream tss(v.at(0));
-  int j = 0;
-  while(getline(tss, s, ' ')){
-    /*cout << "Command chunk from command_args is: ";
-    for (int i = 0; i < s.size(); i++){
-      cout << command_args[j][i];
-      }*/
-  /*cout << "Command chunk from args_vector is: ";
-    for (int i = 0; i < s.size(); i++){
-      cout << args_vector[j][i];
-      }
-    cout << '\n';
-    j++;
-    }*/
-
+  while(ss >> s){
+	 vector<char> cv(s.begin(), s.end());
+	 cv.push_back('\0');
+	 args_vector.push_back(cv);
+  }
   
-  execvp(command_args[0], command_args);
-
-  //char * args[] = {"", "", NULL};
-	
-    //int pid = fork();
-   
-    /* Child process */
-  /*   if (pid == 0) {
-      if (v.at(pos).at(0) == PIPE) {
-	int pipefd[2];
-	//	  pipe(pipefd);
-      }
-      else if (v.at(pos).at(0) == OUTPUT_REDIRECTION) {
-
-      }
-      else if (v.at(pos).at(0) == INPUT_REDIRECTION) {
-
-      }
-    }
-  */  /* Parent process */
-  /*   else if (pid > 0) {
-      
-    }
-    else {
-      cerr << "Error: Invalid pid." << endl;
-      return -2;
-    }
-    
-    }*/
-  return 1;
+  for(int i = 0; i < args_vector.size(); i++){
+    char *arg = &args_vector[i][0];   
+    args[i] = arg;
+  }
+  
+  args[args_vector.size() + 1] = NULL;
+  
+  pid_t child_pid;
+  int status;
+  
+  child_pid = fork();
+  
+  if(child_pid == 0){
+    execvp(args[0], args);
+    cout << "Error: execution of command failed";
+  }
+  
+  else{
+    pid_t pid;  
+    do{
+      pid = wait(&status);
+    } while(pid != child_pid);
+  }
 }
-  
+
 int main()
 {
   string input;
   vector<string> token_groups;
+
   cout << "shell> ";
+
   while (getline(cin, input)) {
     int process_status = process_input(input, token_groups);
     
-    if(!process_status){
-      break;
-    }
-    
-    if(process_status > 0){  
+    if(!process_status) break;
 
-      //Testing
-      /*for(int i = 0; i < token_groups.size(); i++)
-	cout << token_groups.at(i) << endl;*/
+    if(process_status > 0) execute(token_groups);
 
-      execute_input(token_groups);
-
-    }
     cout << "\nshell> ";
   }
+  return 0;
 }
- 
