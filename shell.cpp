@@ -5,6 +5,9 @@
 #include <string>
 #include <iostream>
 #include <vector>
+#include <sstream>
+#include <iterator>
+#include <algorithm>
 
 using namespace std;
 
@@ -112,17 +115,21 @@ int process_input(string s, vector<string> &token_groups){
 
 int execute_input(vector<string> &v)
 {
-  for (int i = 0; i < v.size(); i ++) {
-
-    
-  }
-  /*
   int pos = 1;
-  while (pos != v.size() - 1) {
-    char * args[] = {"", "", NULL};
+  //  while (pos != v.size() - 1) {
+  string command = v.at(0);
+  cout << "Command: " << command << endl;
+  istringstream iss(command);
+  vector<string> command_args;
+  copy(istream_iterator<string>(iss),
+       istream_iterator<string>(),
+       back_inserter(command_args));
+  
+  
+  //char * args[] = {"", "", NULL};
 	
-    int pid = fork();
-  */ 
+    //int pid = fork();
+   
     /* Child process */
   /*   if (pid == 0) {
       if (v.at(pos).at(0) == PIPE) {
@@ -138,8 +145,6 @@ int execute_input(vector<string> &v)
     }
   */  /* Parent process */
   /*   else if (pid > 0) {
-      
-      
       
     }
     else {
@@ -163,10 +168,11 @@ int main()
     }
     
     if(process_status > 0){  
-      //execute_input(token_groups);
+
       //Testing
       for(int i = 0; i < token_groups.size(); i++)
 	cout << token_groups.at(i) << endl;
+      execute_input(token_groups);
     }
     cout << "\nshell> ";
   }
