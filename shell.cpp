@@ -8,6 +8,8 @@
 #include <sstream>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 using namespace std;
 
@@ -50,7 +52,7 @@ string trim_token_group(string s){
   return s;
 }
 
-int process_input(string s, vector<string> &token_groups){
+int process_input(string s, vector<string> &token_groups) {
   token_groups.resize(0);
 
   if(!s.size()) return -1;
@@ -99,6 +101,11 @@ int process_input(string s, vector<string> &token_groups){
 	  return -1;  
 	}
 	
+	if (!verify_token_group(trim_token_group(s.substr(pos, i-pos)))) {
+	  cerr << "Error: invalid characters in input.";
+	  return -1;
+	}
+	
 	token_groups.push_back(trim_token_group(s.substr(pos, i-pos)));
 	token_groups.push_back(string(1, s.at(i)));
 	pos = i+2;
@@ -114,46 +121,90 @@ int process_input(string s, vector<string> &token_groups){
     cout << "Error: no whitespace only command allowed";
     return -1;
   }
+  if (!verify_token_group(trim_token_group(s.substr(pos)))) {
+    cerr << "Error: invalid characters in input.";
+    return -1;
+  }
   token_groups.push_back(trim_token_group(s.substr(pos)));
   return 1; 
 }
 
-void execute(&vector<string> v){
+void redirect(vector<string> &v) {
+  
   vector< vector<char> > args_vector;
   char *args[50] = {NULL};
   string s;
-  stringstream ss(v.front());
-  v.pop_front();
   
-  while(ss >> s){
-	 vector<char> cv(s.begin(), s.end());
-	 cv.push_back('\0');
-	 args_vector.push_back(cv);
+  if (v.front() != ">" && v.front() != "<" && v.front() != "|") {
+    stringstream ss(v.front());
+    v.erase(v.begin());
+    
+    while (ss >> s) {
+      vector<char> cv(s.begin(), s.end());
+      cv.push_back('\0');
+      args_vector.push_back(cv);
+    }
+    
+    for (int i = 0; i < args_vector.size(); i++) {
+      char *arg = &args_vector[i][0];   
+      args[i] = arg;
+    }
+    
+    args[args_vector.size() + 1] = NULL;
   }
-  
-  for(int i = 0; i < args_vector.size(); i++){
-    char *arg = &args_vector[i][0];   
-    args[i] = arg;
-  }
-  
-  args[args_vector.size() + 1] = NULL;
   
   pid_t child_pid;
   int status;
   
   child_pid = fork();
   
-  if(child_pid == 0){
-    execvp(args[0], args);
-    cout << "Error: execution of command failed";
+  string token = "";
+  string filename;
+  if (v.size() > 0) {
+    token = v.front();
+    filename = *(v.begin() + 1);
+    v.erase(v.begin(), v.begin()+2);
   }
   
-  else{
+  if (child_pid == 0) {
+    if (token == ">") {
+      int out = open(filename.c_str(), O_WRONLY | O_TRUNC | O_CREAT, S_IRUSR | S_IRGRP | S_IWGRP | S_IWUSR);
+      dup2(out, 1);
+      close(out);
+      execvp(args[0], args);
+    }
+    else if (token == "<") {
+      if (v.size() == 2 && v.front() == ">") {
+	/* if < and > */
+	int out = open((v.begin()+1)->c_str(), O_WRONLY | O_TRUNC | O_CREAT, S_IRUSR | S_IRGRP | S_IWGRP | S_IWUSR);
+	dup2(out, 1);
+	close(out);
+      }
+      
+      int in = open(filename.c_str(), O_RDONLY);
+      dup2(in, 0);
+      close(in);
+      execvp(args[0], args);
+    }
+    else if (v.size() == 0) {
+      execvp(args[0], args);
+      /* when the exec fails */
+      cout << "Error: execution failed." << endl;
+      exit(0);
+    }
+  }
+  
+  else {
     pid_t pid;  
-    do{
+    do {
       pid = wait(&status);
     } while(pid != child_pid);
+    if (status != 0) {
+      cout << "Error: child returned with exit status: " << status << endl;
+    }
+    
   }
+  //}
 }
 
 int main()
@@ -166,9 +217,11 @@ int main()
   while (getline(cin, input)) {
     int process_status = process_input(input, token_groups);
     
-    if(!process_status) break;
+    if(!process_status)
+      break;
 
-    if(process_status > 0) execute(token_groups);
+    if(process_status > 0)
+      redirect(token_groups);
 
     cout << "\nshell> ";
   }
