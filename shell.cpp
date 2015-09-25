@@ -118,41 +118,111 @@ int process_input(string s, vector<string> &token_groups){
   return 1; 
 }
 
-void execute(&vector<string> v){
-  vector< vector<char> > args_vector;
-  char *args[50] = {NULL};
-  string s;
-  stringstream ss(v.front());
-  v.pop_front();
-  
-  while(ss >> s){
-	 vector<char> cv(s.begin(), s.end());
-	 cv.push_back('\0');
-	 args_vector.push_back(cv);
-  }
-  
-  for(int i = 0; i < args_vector.size(); i++){
-    char *arg = &args_vector[i][0];   
-    args[i] = arg;
-  }
-  
-  args[args_vector.size() + 1] = NULL;
-  
-  pid_t child_pid;
-  int status;
-  
-  child_pid = fork();
-  
-  if(child_pid == 0){
-    execvp(args[0], args);
-    cout << "Error: execution of command failed";
-  }
-  
-  else{
-    pid_t pid;  
-    do{
-      pid = wait(&status);
-    } while(pid != child_pid);
+void execute(vector<string> &v){
+  if(true){
+    int status;
+    int num_pipes = 0;
+    for(int i = 0; i < v.size(); i++){
+      if(v[i] == "|"){
+	num_pipes++;
+	v.erase(v.begin() + i);
+      }
+    }
+    
+    int pipes[2 * num_pipes];
+    
+    for(int i = 0; i < num_pipes; i++) pipe(pipes + i * 2);
+
+    for(int i = 0; i <= num_pipes; i++){
+      if (fork() == 0){
+	cout << "This is a child process" << endl;
+	if(i == 0){
+	  dup2(pipes[1], 1);
+	}
+
+	else if(i == num_pipes){
+	  dup2(pipes[0], 0);
+	}
+
+	else{
+	  dup2(pipes[i-1], 0);
+	  dup2(pipes[i+2], 1);
+	}
+
+	for (int k = 0; k < (num_pipes *2); k++){
+	  close(pipes[k]);
+	}
+
+	cout << "Command is: " + v[i] << endl;
+	stringstream ss(v[i]);
+	vector< vector<char> > args_vector;
+	char *args[50] = {NULL};
+	string s;
+	
+	while(ss >> s){
+	  vector<char> cv(s.begin(), s.end());
+	  cv.push_back('\0');
+	  args_vector.push_back(cv);
+	}
+	
+	for(int i = 0; i < args_vector.size(); i++){
+	  char *arg = &args_vector[i][0];   
+	  args[i] = arg;
+	}
+	
+	args[args_vector.size() + 1] = NULL;	
+
+	execvp(args[0], args);
+	cout << "Error: execution of command failed";
+      }
+      
+      else{
+	for (int j = 0; j < (num_pipes *2); j++){
+	  close(pipes[j]);
+	}
+	for(int j = 0; j <= num_pipes; j++){
+	  wait(&status);
+	  cout << "waiting..."<< endl;
+	}
+	cout << "exited!" << endl;
+      }
+    }
+    
+    /*
+    vector< vector<char> > args_vector;
+    char *args[50] = {NULL};
+    string s;
+    
+    while(ss >> s){
+      vector<char> cv(s.begin(), s.end());
+      cv.push_back('\0');
+      args_vector.push_back(cv);
+    }
+    
+    for(int i = 0; i < args_vector.size(); i++){
+      char *arg = &args_vector[i][0];   
+      args[i] = arg;
+    }
+    
+    args[args_vector.size() + 1] = NULL;
+    
+    pid_t child_pid;
+    int status;
+    
+    child_pid = fork();
+    
+    if(child_pid == 0){
+      execvp(args[0], args);
+      cout << "Error: execution of command failed";
+    }
+    
+    else{
+      pid_t pid;  
+      do{
+	pid = wait(&status);
+      } while(pid != child_pid);
+    }
+    */
   }
 }
 
