@@ -101,7 +101,9 @@ int process_input(string s, vector<string> &token_groups){
 
 	if(!verify_token_group(s.substr(pos, i - pos))){
 	  cout << "Error: A token group contains an invalid character\n";
+	  return -1;
 	}
+	
 	token_groups.push_back(trim_token_group(s.substr(pos, i-pos)));
 	token_groups.push_back(string(1, s.at(i)));
 	pos = i+2;
@@ -117,70 +119,74 @@ int process_input(string s, vector<string> &token_groups){
     cout << "Error: no whitespace only command allowed.\n";
     return -1;
   }
+
+  if(!verify_token_group(s.substr(pos))){
+    cout << "Error: A token group contains an invalid character\n";
+    return -1;
+  }
+
   token_groups.push_back(trim_token_group(s.substr(pos)));
   return 1; 
 }
 
-void execute(vector<string> &v){
-  if(true){
-    int status;
-    int num_pipes = 0;
-    for(int i = 0; i < v.size(); i++){
-      if(v[i] == "|"){
-	num_pipes++;
-	v.erase(v.begin() + i);
-      }
+void pipe(vector<string> &v){
+  int status;
+  int num_pipes = 0;
+  for(int i = 0; i < v.size(); i++){
+    if(v[i] == "|"){
+      num_pipes++;
+      v.erase(v.begin() + i);
     }
-    
-    int pipes[2 * num_pipes];
-    
-    for(int i = 0; i < num_pipes; i++) pipe(pipes + i * 2);
-
-    vector <int> pids;
-    
-    for(int i = 0; i <= num_pipes; i++){
-      pids.push_back(fork());
-      if (pids.back()  == 0){
-	if(i == 0) dup2(pipes[1], 1);
-    
-    
-	else if(i == num_pipes) dup2(pipes[2 *(i-1)], 0);
-   
+  }
+  
+  int pipes[2 * num_pipes];
+  
+  for(int i = 0; i < num_pipes; i++) pipe(pipes + i * 2);
+  
+  vector <int> pids;
+  
+  for(int i = 0; i <= num_pipes; i++){
+    pids.push_back(fork());
+    if (pids.back()  == 0){
+      if(i == 0) dup2(pipes[1], 1);
+      
+      
+      else if(i == num_pipes) dup2(pipes[2 *(i-1)], 0);
+      
 	
-        else{
-	  dup2(pipes[2*(i-1)], 0);
-	  dup2(pipes[2*i+1], 1);
-        }
+      else{
+	dup2(pipes[2*(i-1)], 0);
+	dup2(pipes[2*i+1], 1);
+      }
       
-        for (int k = 0; k < (num_pipes * 2); k++) close(pipes[k]);
+      for (int k = 0; k < (num_pipes * 2); k++) close(pipes[k]);
+      
+      stringstream ss(v[i]);
+      vector< vector<char> > args_vector;
+      char *args[50] = {NULL};
+      string s;
+      
+      while(ss >> s){
+	vector<char> cv(s.begin(), s.end());
+	cv.push_back('\0');
+	args_vector.push_back(cv);
+      }
 	
-	stringstream ss(v[i]);
-        vector< vector<char> > args_vector;
-	char *args[50] = {NULL};
-	string s;
+      for(int i = 0; i < args_vector.size(); i++){
+	char *arg = &args_vector[i][0];   
+	args[i] = arg;
+      }
       
-	while(ss >> s){
-	  vector<char> cv(s.begin(), s.end());
-	  cv.push_back('\0');
-	  args_vector.push_back(cv);
-	}
-	
-	for(int i = 0; i < args_vector.size(); i++){
-	  char *arg = &args_vector[i][0];   
-	  args[i] = arg;
-	}
+      args[args_vector.size() + 1] = NULL;	
       
-	args[args_vector.size() + 1] = NULL;	
-      
-	int exit_code = execvp(args[0], args);
-	cout << "Error: execution of command failed with exit code: " << exit_code << endl;
-      }//closes if (fork() == 0)
-    }//closes for loop for forking
-    
-    for (int i = 0; i < (num_pipes *2); i++) close(pipes[i]);
-    
-    for(int i = 0; i <= num_pipes; i++) wait(&status);
-  }//closes if true
+      int exit_code = execvp(args[0], args);
+      cout << "Error: execution of command failed with exit code: " << exit_code << endl;
+    }//closes if (fork() == 0)
+  }//closes for loop for forking
+  
+  for (int i = 0; i < (num_pipes *2); i++) close(pipes[i]);
+  
+  for(int i = 0; i <= num_pipes; i++) wait(&status);
 }
 
 int main()
@@ -195,7 +201,7 @@ int main()
     cout << "Process status is: " << process_status << endl;
     if(!process_status) break;
 
-    if(process_status > 0) execute(token_groups);
+    if(process_status > 0) pipe(token_groups);
       
     cout << "shell> ";
   }
